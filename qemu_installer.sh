@@ -83,6 +83,58 @@ version() {
 EOF
 }
 
+test_iso() {
+  qemu-system-x86_64 \
+  -runas $userhost \
+  -cpu host \
+  -no-acpi \
+  -soundhw all \
+  -k fr \
+  -accel kvm \
+  -m ${ramvmmb}M \
+  -smp cpus=1,cores=$cpuvm,sockets=1,maxcpus=$cpuvm \
+  -netdev user,id=network0 -device rtl8139,netdev=network0 \
+  -cdrom $isovm \
+  -boot d &
+  
+  pid_qemu="$!"
+}
+
+install_iso() {
+  qemu-system-x86_64 \
+  -runas $userhost \
+  -cpu host \
+  -no-acpi \
+  -soundhw all \
+  -k fr \
+  -accel kvm \
+  -m ${ramvmmb}M \
+  -smp cpus=1,cores=$cpuvm,sockets=1,maxcpus=$cpuvm \
+  -netdev user,id=network0 -device rtl8139,netdev=network0 \
+  -drive file=${diskvm},format=raw \
+  -cdrom $isovm \
+  -boot once=d &
+  
+  pid_qemu="$!"
+}
+
+start_system() {
+  qemu-system-x86_64 \
+  -runas $userhost \
+  -cpu host \
+  -no-acpi \
+  -soundhw all \
+  -k fr \
+  -accel kvm \
+  -m ${ramvmmb}M \
+  -smp cpus=1,cores=$cpuvm,sockets=1,maxcpus=$cpuvm \
+  -netdev user,id=network0 -device rtl8139,netdev=network0 \
+  -drive file=${diskvm},format=raw \
+  -boot c &
+  
+  pid_qemu="$!"
+}
+
 ### Global variables ###
 # user
 userhost="$(id -u 1000 -n)"
@@ -172,13 +224,6 @@ do
   esac
 done
 
-if [[ -z ${isovm} ]]
-then
-echo "-----> L'option -o est obligatoire !"
-usage
-exit 1
-fi
-
 # Install
 apt-get install ovmf qemu qemu-system-x86 -y
 
@@ -194,35 +239,13 @@ fi
 
 if [[ -z ${diskvm} ]]
 then
-  qemu-system-x86_64 \
-  -runas $userhost \
-  -cpu host \
-  -no-acpi \
-  -soundhw all \
-  -k fr \
-  -accel kvm \
-  -m ${ramvmmb}M \
-  -smp cpus=1,cores=$cpuvm,sockets=1,maxcpus=$cpuvm \
-  -netdev user,id=network0 -device rtl8139,netdev=network0 \
-  -cdrom $isovm \
-  -boot d &
+  test_iso
+elif [[ -z $isovm ]]
+then
+  start_system
 else
-  qemu-system-x86_64 \
-  -runas $userhost \
-  -cpu host \
-  -no-acpi \
-  -soundhw all \
-  -k fr \
-  -accel kvm \
-  -m ${ramvmmb}M \
-  -smp cpus=1,cores=$cpuvm,sockets=1,maxcpus=$cpuvm \
-  -netdev user,id=network0 -device rtl8139,netdev=network0 \
-  -drive file=${diskvm},format=raw \
-  -cdrom $isovm \
-  -boot once=d &
+  install_iso
 fi
-
-pid_qemu="$!"
 
 sleep 2
 
