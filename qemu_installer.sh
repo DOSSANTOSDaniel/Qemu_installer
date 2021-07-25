@@ -67,6 +67,9 @@ usage() {
   * Pour tester le système Debian :
   ./$(basename ${0}) -o /home/daniel/debian.iso
 
+  * Pour Lancer un système déjà installé sur un disque (clé USB, SSD, HD) :
+  ./$(basename ${0}) -d sdb
+
 EOF
 }
 
@@ -178,7 +181,6 @@ else
   cpuvm='1'
 fi
 
-
 # Filtrage des options utilisateur
 if [[ ${#} -eq "0" ]]
 then
@@ -196,7 +198,6 @@ then
   usage
   exit 1
 fi
-
 
 while getopts "hvd:o:" argument
 do
