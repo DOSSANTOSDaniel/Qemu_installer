@@ -1,11 +1,11 @@
 # Qemu_installer
-Script permettant l'installation et le test de differents OS
+Script permettant l'installation et le test de differents OS sur differents supports
 
 ./qemu_installer -[h|v|d|o] <Argument>
   
   Le script doit être lancé en tant que root.
   
-  Rôle:                                          
+  ### Rôle:                                          
   A l'aide de Qemu ce script va permettre d'installer differents systèmes d'exploitation 
   directement sur des périferiques de stockage comme des clés USB ou disques dur
   sans avoir besoin de redémarrer l'ordinateur host.
@@ -15,22 +15,32 @@ Script permettant l'installation et le test de differents OS
   2. Teste des live cd.
   
   ```
-  Usage:
-  ./$(basename ${0}) -[h|v]
+  ### Usage :
+  ```Bash
+  ./qemu_installer -[h|v]
   
-  ./$(basename ${0}) -[d|o] <Argument>
+  ./qemu_installer -[d|o] <Argument>
   
   -h : Aide.
   -v : Affiche la version.
   
   -d : Disque.(sda,sdb,sdc...)
   -o : Fichier ISO ou IMG.(fichier.iso)
-  
-  Exemple:
-  * Pour Installer Debian sur le péripherique sdb :
-  ./$(basename ${0}) -d sdb -o /home/daniel/debian.iso
-  
-  * Pour tester le système Debian :
-  ./$(basename ${0}) -o /home/daniel/debian.iso
-  
   ```
+  ### Exemples :
+  * Pour Installer Debian sur le péripherique sdb :
+  ```Bash
+  ./qemu_installer -d sdb -o /home/daniel/debian.iso
+  ```
+  
+  * Pour tester une image iso de Debian :
+  ```Bash
+  ./qemu_installer -o /home/daniel/debian.iso
+  ```
+  
+  * Pour Lancer un système d'exploitation déjà installé sur un disque (clé USB, SSD, HD) :
+  ```Bash
+  ./qemu_installer -d sdb
+  ```
+  
+
