@@ -135,6 +135,18 @@ start_system() {
   pid_qemu="$!"
 }
 
+check_name_disck() {
+  regex="^[s][d][a-z]$"
+
+  if [[ ! $(basename $diskvm) =~ ${regex} ]]
+  then
+    echo "Erreur de saisie ! :"
+    echo " La valeur $(basename $diskvm) n'est pas permise !"
+    usage
+    exit 1
+  fi
+}
+
 ### Global variables ###
 # user
 userhost="$(id -u 1000 -n)"
@@ -183,11 +195,6 @@ then
   echo "-----> ${1} n'est pas une option valide ! "
   usage
   exit 1
-elif [[ ${1} == '-o' ]]
-then
-  echo "-----> ${1} Les parametres doivent commencer par -d ! "
-  usage
-  exit 1
 fi
 
 
@@ -227,23 +234,15 @@ done
 # Install
 apt-get install ovmf qemu qemu-system-x86 -y
 
-regex="^[s][d][a-z]$"
-
-if [[ ! $(basename $diskvm) =~ ${regex} ]]
-then
-  echo "Erreur de saisie ! :"
-  echo " La valeur $(basename $diskvm) n'est pas permise !"
-  usage
-  exit 1
-fi
-
 if [[ -z ${diskvm} ]]
 then
   test_iso
 elif [[ -z $isovm ]]
 then
+  check_name_disck
   start_system
 else
+  check_name_disck
   install_iso
 fi
 
