@@ -1,6 +1,7 @@
 # Qemu_installer
 
   - Le script doit être lancé en tant que root.
+  - Ce script est seulement compatible avec des installations en 64bits
   
   ## Rôle:                                                                                   
   A l'aide de Qemu ce script va permettre d'installer, tester ou démarrer différents systèmes d'exploitation 
@@ -41,7 +42,7 @@
   ```Bash
   ./qemu_installer -d sdb
   ```  
-  * Pour Lancer un système déjà installé sur un disque virtuel (au format raw):
+  * Pour Lancer un système déjà installé sur un disque virtuel :
   ```Bash
   ./qemu_installer -d /home/daniel/Qemu_vms/disk_antiX-19.4_x64-full_13692.img
   ```
