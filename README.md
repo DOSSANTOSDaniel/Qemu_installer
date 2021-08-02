@@ -47,7 +47,10 @@
   ```
   
   ## Autre exemple :
-  ### Installation d'Antix sur un disque virtuel.
+  ### Installation d'Antix sur un disque virtuel de 20 GB.
+  ```Bash
+  ./qemu_installer -s 20 -o /home/daniel/antiX-19.4_x64-full.iso  
+  ``` 
   ![capture](https://github.com/DOSSANTOSDaniel/Qemu_installer/blob/main/images/Cap.png)
 
   
