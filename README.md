@@ -48,6 +48,6 @@
   
   ## Autre exemple :
   ### Installation d'Antix sur un disque virtuel.
-  [capture](images/cap.png)
+  ![capture](https://github.com/DOSSANTOSDaniel/Qemu_installer/blob/main/images/Cap.png)
 
   
