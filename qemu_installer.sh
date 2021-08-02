@@ -34,48 +34,52 @@ usage() {
   
   ___ Script : $(basename ${0}) ___
   
-  Parametres passés : ${@}
-  
-  $(basename ${0}) -[h|v|d|o] <Argument>
+  Paramètres passés : ${@}
   
   Le script doit être lancé en tant que root.
   
   Rôle:                                          
-  A l'aide de Qemu ce script va permettre d'installer differents systèmes d'exploitation 
-  directement sur des périferiques de stockage comme des clés USB ou disques dur
-  sans avoir besoin de redémarrer l'ordinateur host.
-
+  A l'aide de Qemu ce script va permettre d'installer, tester ou démarrer différents systèmes d'exploitation directement sur ou à partir de périphériques de stockage ou de disques virtuels.
+  
   Détail des fonctionnalités :
-  1. Installation de systèmes d'exploitation.
+  1. Installation de systèmes d'exploitation sur un support physique ou virtuel.
   2. Teste des live cd.
+  3. Exécution de systèmes déjà installés soit avec un support de stockage physique ou virtuel.
 
   Usage:
   ./$(basename ${0}) -[h|v]
   
-  ./$(basename ${0}) -[d|o] <Argument>
+  ./$(basename ${0}) -[d|o|s] <Arguments>
   
   -h : Aide.
   -v : Affiche la version.
   
-  -d : Disque.(sda,sdb,sdc...)
-  -o : Fichier ISO ou IMG.(fichier.iso)
+  -d : Disque.(sda,sdb,sdc... ou disque virtuel au format raw)
+  -o : Fichier ISO ou IMG.
+  -s : Taille du disque virtuel en GB.
   
-  Exemple:
-  * Pour Installer Debian sur le péripherique sdb :
+  Exemples:
+  * Pour Installer Debian sur un périphérique physique (hd, ssd, usb):
   ./$(basename ${0}) -d sdb -o /home/daniel/debian.iso
   
-  * Pour tester le système Debian :
+  * Pour Installer Debian sur un disque virtuel (disque virtuel de 20 GB):
+  ./$(basename ${0}) -s 20 -o /home/daniel/debian.iso  
+  
+  * Pour tester un image live du système Debian:
   ./$(basename ${0}) -o /home/daniel/debian.iso
 
-  * Pour Lancer un système déjà installé sur un disque (clé USB, SSD, HD) :
+  * Pour Lancer un système déjà installé sur un disque (clé USB, SSD, HD):
   ./$(basename ${0}) -d sdb
+  
+  * Pour Lancer un système déjà installé sur un disque virtuel (au format raw) :
+  ./$(basename ${0}) -d /home/daniel/Qemu_vms/disk_antiX-19.4_x64-full_13692.img 
 
 EOF
 }
 
 version() {
-  local ver='1'
-  local dat='25/07/21'
+  local ver='2'
+  local dat='01/08/21'
   cat << EOF
   
   ___ Script : $(basename ${0}) ___
@@ -86,65 +90,119 @@ version() {
 EOF
 }
 
-test_iso() {
+test_img() {
+  user="$userhost"
+  ram="${ramvmmb}M"
+  cpu="$cpuvm"
+  img="$img_sys"
+  
   qemu-system-x86_64 \
-  -runas $userhost \
+  -runas $user \
   -cpu host \
-  -no-acpi \
   -soundhw all \
   -k fr \
   -accel kvm \
-  -m ${ramvmmb}M \
-  -smp cpus=1,cores=$cpuvm,sockets=1,maxcpus=$cpuvm \
+  -m $ram \
+  -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
   -netdev user,id=network0 -device rtl8139,netdev=network0 \
-  -cdrom $isovm \
+  -cdrom $img \
   -boot d &
   
   pid_qemu="$!"
 }
 
-install_iso() {
+install_hard() {
+  user="$userhost"
+  ram="${ramvmmb}M"
+  cpu="$cpuvm"
+  disk="$disk_device"
+  img="$img_sys"
+
   qemu-system-x86_64 \
-  -runas $userhost \
+  -runas $user \
   -cpu host \
-  -no-acpi \
   -soundhw all \
   -k fr \
   -accel kvm \
-  -m ${ramvmmb}M \
-  -smp cpus=1,cores=$cpuvm,sockets=1,maxcpus=$cpuvm \
+  -m $ram \
+  -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
   -netdev user,id=network0 -device rtl8139,netdev=network0 \
-  -drive file=${diskvm},format=raw \
-  -cdrom $isovm \
+  -drive file=${disk},format=raw \
+  -cdrom $img \
   -boot once=d &
   
   pid_qemu="$!"
 }
 
-start_system() {
+install_virt() {
+  user="$userhost"
+  ram="${ramvmmb}M"
+  cpu="$cpuvm"
+  disk="$disk_device"
+  img="$img_sys"
+
+  size_disk="$size_vm_img"
+  dir_vm_img="/home/$userhost/Qemu_vms"
+  img_name="$(basename $(basename -- $img_sys .iso) .img)"
+  
+  # create directory
+  if ! [[ -d $dir_vm_img ]]
+  then
+    su -l $user -c "mkdir $dir_vm_img" -s /bin/bash
+  fi
+
+  # create virtual disk
+  img_name_out="disk_${img_name}_${RANDOM}.img"
+  
+  qemu-img create -q -f raw ${dir_vm_img}/${img_name_out} ${size_disk}G
+  
   qemu-system-x86_64 \
-  -runas $userhost \
+  -runas $user \
+  -cpu host \
+  -soundhw all \
+  -k fr \
+  -accel kvm \
+  -m $ram \
+  -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
+  -netdev user,id=network0 -device rtl8139,netdev=network0 \
+  -drive file=${dir_vm_img}/${img_name_out},format=raw \
+  -cdrom $img \
+  -boot once=d &
+  
+  pid_qemu="$!"
+}
+
+start_sys() {
+  user="$userhost"
+  ram="${ramvmmb}M"
+  cpu="$cpuvm"
+  disk="$disk_device"
+
+  qemu-system-x86_64 \
+  -runas $user \
   -cpu host \
   -no-acpi \
   -soundhw all \
   -k fr \
   -accel kvm \
-  -m ${ramvmmb}M \
-  -smp cpus=1,cores=$cpuvm,sockets=1,maxcpus=$cpuvm \
+  -m $ram \
+  -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
   -netdev user,id=network0 -device rtl8139,netdev=network0 \
-  -drive file=${diskvm},format=raw \
+  -drive file=${disk},format=raw \
   -boot c &
   
   pid_qemu="$!"
 }
 
-check_name_disck() {
+check_name_disk() {
+  disk="$disk_device"
+
   regex="^[s][d][a-z]$"
 
-  if [[ ! $(basename $diskvm) =~ ${regex} ]]
+  if [[ ! $(basename $disk) =~ ${regex} ]]
   then
     echo "Erreur de saisie ! :"
-    echo " La valeur $(basename $diskvm) n'est pas permise !"
+    echo " La valeur $(basename $disk) n'est pas permise !"
     usage
     exit 1
   fi
@@ -159,10 +217,16 @@ ramkb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 ramvmmb=$(($ramkb / 2 / 1000))
 
 # Disk
-diskvm=""
+disk_device=""
 
-# ISO
-isovm=""
+# IMG
+img_sys=""
+
+# Size image disk
+size_vm_img=""
+
+# Name img out
+img_name_out=""
 
 ### Main ###
 
@@ -181,7 +245,7 @@ else
   cpuvm='1'
 fi
 
-# Filtrage des options utilisateur
+# Filter user options
 if [[ ${#} -eq "0" ]]
 then
   echo "-----> Il manque des options !"
@@ -199,7 +263,7 @@ then
   exit 1
 fi
 
-while getopts "hvd:o:" argument
+while getopts "hvd:o:s:" argument
 do
   case "${argument}" in
     h)
@@ -211,10 +275,13 @@ do
       exit 1
       ;;
     d)
-      readonly diskvm="/dev/${OPTARG}"
+      disk_device="${OPTARG}"
       ;;
     o)
-      readonly isovm="${OPTARG}"
+      readonly img_sys="${OPTARG}"
+      ;;
+    s)
+      readonly size_vm_img="${OPTARG}"
       ;;
     :)
       echo "L'option nécessite un argument."
@@ -235,16 +302,41 @@ done
 # Install
 apt-get install ovmf qemu qemu-system-x86 -y
 
-if [[ -z ${diskvm} ]]
+if [[ ! -z ${disk_device} && ! -z ${img_sys} && -z $size_vm_img ]]
 then
-  test_iso
-elif [[ -z $isovm ]]
+  disk_device="/dev/${disk_device}"
+  check_name_disk
+  install_hard
+elif [[ -z ${disk_device} && ! -z ${img_sys} && ! -z $size_vm_img ]]
 then
-  check_name_disck
-  start_system
+  # Size of virtual disk
+  ## free space of host disk
+  free_space_kb="$(df --type=ext4 -l --output=avail | tail -n +2)"
+  free_space_mb="$((${free_space_kb}/1000))" #MB
+  free_space_disk="$((${free_space_mb}-10000))" # Security
+
+  size_vm_img_mb="$((${size_vm_img}*1000))"
+
+  if [[ $size_vm_img_mb -gt ${free_space_disk} ]]
+  then
+    echo "Pas assez d'espace disque, espace libre: ${free_space_mb}MB"
+    exit 1
+  elif [[ $size_vm_img_mb -lt 1000 ]]
+  then
+    echo "Taille trop petite, minimum: 1000 MB pour un disque virtuel"
+    exit 1
+  fi
+  install_virt
+elif [[ -z ${disk_device} && ! -z ${img_sys} && -z $size_vm_img ]]
+then
+  test_img
+elif [[ ! -z ${disk_device} && -z ${img_sys} && -z $size_vm_img ]]
+then
+  start_sys
 else
-  check_name_disck
-  install_iso
+  echo "Erreur de saisie"
+  usage
+  exit 1
 fi
 
 sleep 2
@@ -256,8 +348,10 @@ then
   echo -e "\n\n Résumé"
   echo -e "------------------------------------\n"
   echo "Qemu en cours de fonctionnement (PID: $pid_qemu) !"
-  echo "ISO : $isovm"
-  echo "Disque : $diskvm"
-  echo "RAM : ${ramvmmb}mb"
+  echo "ISO/IMG : $img_sys"
+  echo "Disque : $disk_device"
+  echo "Nom disque dur virtuel : $img_name_out"
+  echo "Taille disque dur virtuel (en GB): ${size_vm_img}"
+  echo "RAM : ${ramvmmb}MB"
   echo -e "CPU : $cpuvm \n"
 fi
