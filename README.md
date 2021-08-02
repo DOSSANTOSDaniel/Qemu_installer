@@ -1,8 +1,9 @@
 # Qemu_installer
 
   - Le script doit être lancé en tant que root.
-  - Ce script est seulement compatible avec des installations en 64bits
-  
+  - Ce script est seulement compatible avec des installations en 64bits.
+  - Création du dossier /home/$USER/Qemu_vms/ pour stocker les images disque, si utilisation.
+   
   ## Rôle:                                                                                   
   A l'aide de Qemu ce script va permettre d'installer, tester ou démarrer différents systèmes d'exploitation 
   directement sur ou à partir de périphériques de stockage ou de disques virtuels.
