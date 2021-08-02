@@ -48,6 +48,6 @@
   
   ## Autre exemple :
   ### Installation d'Antix sur un disque virtuel.
-  ![Image logo google](images/cap.png)
+  ![capture](images/cap.png)
 
   
