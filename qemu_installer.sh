@@ -71,7 +71,7 @@ usage() {
   * Pour Lancer un système déjà installé sur un disque (clé USB, SSD, HD):
   ./$(basename ${0}) -d sdb
   
-  * Pour Lancer un système déjà installé sur un disque virtuel (au format raw) :
+  * Pour Lancer un système déjà installé sur un disque virtuel :
   ./$(basename ${0}) -d /home/daniel/Qemu_vms/disk_antiX-19.4_x64-full_13692.img 
 
 EOF
@@ -102,6 +102,8 @@ test_img() {
   -soundhw all \
   -k fr \
   -accel kvm \
+  -show-cursor \
+  -enable-kvm \
   -m $ram \
   -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
   -netdev user,id=network0 -device rtl8139,netdev=network0 \
@@ -124,6 +126,8 @@ install_hard() {
   -soundhw all \
   -k fr \
   -accel kvm \
+  -show-cursor \
+  -enable-kvm \
   -m $ram \
   -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
   -netdev user,id=network0 -device rtl8139,netdev=network0 \
@@ -162,6 +166,8 @@ install_virt() {
   -soundhw all \
   -k fr \
   -accel kvm \
+  -show-cursor \
+  -enable-kvm \
   -m $ram \
   -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
   -netdev user,id=network0 -device rtl8139,netdev=network0 \
@@ -181,14 +187,15 @@ start_sys() {
   qemu-system-x86_64 \
   -runas $user \
   -cpu host \
-  -no-acpi \
   -soundhw all \
   -k fr \
   -accel kvm \
+  -show-cursor \
+  -enable-kvm \
   -m $ram \
   -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
   -netdev user,id=network0 -device rtl8139,netdev=network0 \
-  -drive file=${disk},format=raw \
+  -drive file=${disk} \
   -boot c &
   
   pid_qemu="$!"
