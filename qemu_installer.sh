@@ -95,12 +95,12 @@ test_img() {
   local ram="${ramvmmb}M"
   local cpu="$cpuvm"
   local img="$img_sys"
+  local usb="$usb_option"
   
   qemu-system-x86_64 \
   -runas $user \
   -cpu host \
   -soundhw all \
-  -k fr \
   -accel kvm \
   -show-cursor \
   -enable-kvm \
@@ -109,7 +109,7 @@ test_img() {
   -device virtio-net,netdev=vmnic \
   -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -cdrom $img \
-  -boot d &
+  -boot d $usb &
   
   pid_qemu="$!"
 }
@@ -120,12 +120,12 @@ install_hard() {
   local cpu="$cpuvm"
   local disk="$disk_device"
   local img="$img_sys"
-
+  local usb="$usb_option"
+  
   qemu-system-x86_64 \
   -runas $user \
   -cpu host \
   -soundhw all \
-  -k fr \
   -accel kvm \
   -show-cursor \
   -enable-kvm \
@@ -135,7 +135,7 @@ install_hard() {
   -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -drive file=${disk},format=raw \
   -cdrom $img \
-  -boot once=d &
+  -boot once=d $usb &
   
   pid_qemu="$!"
 }
@@ -146,6 +146,8 @@ install_virt() {
   local cpu="$cpuvm"
   local disk="$disk_device"
   local img="$img_sys"
+  local usb="$usb_option"
+  
 
   local size_disk="$size_vm_img"
   local img_name="$(basename $(basename -- $img .iso) .img)"
@@ -165,7 +167,6 @@ install_virt() {
   -runas $user \
   -cpu host \
   -soundhw all \
-  -k fr \
   -accel kvm \
   -show-cursor \
   -enable-kvm \
@@ -175,22 +176,22 @@ install_virt() {
   -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -drive file=${dir_vm_img}/${img_name_out},format=raw \
   -cdrom $img \
-  -boot once=d &
+  -boot once=d $usb &
   
   pid_qemu="$!"
 }
 
 start_sys() {
-  user="$userhost"
-  ram="${ramvmmb}M"
-  cpu="$cpuvm"
-  disk="$disk_device"
-
+  local user="$userhost"
+  local ram="${ramvmmb}M"
+  local cpu="$cpuvm"
+  local disk="$disk_device"
+  local usb="$usb_option"
+  
   qemu-system-x86_64 \
   -runas $user \
   -cpu host \
   -soundhw all \
-  -k fr \
   -accel kvm \
   -show-cursor \
   -enable-kvm \
@@ -199,7 +200,7 @@ start_sys() {
   -device virtio-net,netdev=vmnic \
   -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -drive file=${disk} \
-  -boot c &
+  -boot c $usb &
   
   pid_qemu="$!"
 }
@@ -219,10 +220,49 @@ usb_host() {
     break
   done
 
-  local vendorid="0x$(echo "$ITEM" | awk '{print $1}' | cut -d':' -f1)"
-  local productid="0x$(echo "$ITEM" | awk '{print $1}' | cut -d':' -f2)"
+  local vendorid="0x$(echo "$ITEM" | awk '{print $1}' | cut -d':' -f1)"
+  local productid="0x$(echo "$ITEM" | awk '{print $1}' | cut -d':' -f2)"
+  
+  readonly usb_name="$(echo "$ITEM" | awk '{for(i=2;i<=NF;i++) printf $i" "; print ""}')" 
+  readonly usb_option="-device usb-ehci,id=ehci -device usb-host,vendorid=$vendorid,productid=$productid"
+}
 
-  usb_option="-device usb-ehci,id=ehci -device usb-host,vendorid=$vendorid,productid=$productid"
+check_disk_name() {
+  readonly regex="^[s][d][a-z]$"
+
+  if [[ $disk_device_all =~ ${regex} ]]
+  then
+    readonly disk_device="/dev/${disk_device_all}"
+  else
+    readonly disk_device="$disk_device_all"
+  fi
+}
+
+all_infos() {
+ps -q $pid_qemu -o state --no-headers && cat << EOF
+
+       ___ Script  : $(basename ${0}) ___
+
+  
+  ----------------- Résumé -----------------
+  ------------------------------------------
+
+  Qemu en cours de fonctionnement (PID: $pid_qemu) !
+  
+  ISO/IMG : $img_sys
+  
+  Disque : $disk_device
+  
+  Taille disque dur virtuel (en GB): $size_vm_img
+  
+  RAM : ${ramvmmb}MB
+  CPU : $cpuvm
+  
+  Connexion SSH : ssh -p 2222 <USER>@localhost  
+  USB Passthrough : $usb_name
+  
+
+EOF
 }
 
 ### Global variables ###
@@ -238,6 +278,7 @@ readonly ramvmmb=$(($ramkb / 2 / 1000))
 
 # Disk
 disk_device=""
+disk_device_all=""
 
 # IMG
 img_sys=""
@@ -247,6 +288,10 @@ size_vm_img=""
 
 # Name img out
 img_name_out=""
+
+# USB options
+usb_option=""
+usb_name='Vide'
 
 ### Main ###
 
@@ -271,7 +316,7 @@ then
   echo "-----> Il manque des options !"
   usage
   exit 1
-elif [[ ${#} -gt "4" ]]
+elif [[ ${#} -gt "5" ]]
 then
   echo "-----> Il y a trop d'options !"
   usage
@@ -283,7 +328,7 @@ then
   exit 1
 fi
 
-while getopts "hvd:o:s:" argument
+while getopts "hvud:o:s:" argument
 do
   case "${argument}" in
     h)
@@ -303,6 +348,9 @@ do
     s)
       readonly size_vm_img="${OPTARG}"
       ;;
+    u)
+      usb_host
+      ;;      
     :)
       echo "L'option nécessite un argument."
       usage
@@ -325,19 +373,11 @@ then
   apt-get install ovmf qemu qemu-system-x86 -y
 fi
 
-if [[ ! -z ${disk_device} && ! -z ${img_sys} && -z $size_vm_img ]]
+if [[ ! -z ${disk_device_all} && ! -z ${img_sys} && -z $size_vm_img ]]
 then
-  readonly regex="^[s][d][a-z]$"
-
-  if [[ $disk_device =~ ${regex} ]]
-  then
-    readonly disk_device="/dev/${disk_device_all}"
-  else
-    readonly disk_device="$disk_device_all"
-  fi
-  
+  check_disk_name  
   install_hard
-elif [[ -z ${disk_device} && ! -z ${img_sys} && ! -z $size_vm_img ]]
+elif [[ -z ${disk_device_all} && ! -z ${img_sys} && ! -z $size_vm_img ]]
 then
   # Size of virtual disk
   ## free space of host disk
@@ -357,11 +397,12 @@ then
     exit 1
   fi
   install_virt
-elif [[ -z ${disk_device} && ! -z ${img_sys} && -z $size_vm_img ]]
+elif [[ -z ${disk_device_all} && ! -z ${img_sys} && -z $size_vm_img ]]
 then
   test_img
-elif [[ ! -z ${disk_device} && -z ${img_sys} && -z $size_vm_img ]]
+elif [[ ! -z ${disk_device_all} && -z ${img_sys} && -z $size_vm_img ]]
 then
+  check_disk_name
   start_sys
 else
   echo "Erreur de saisie"
@@ -373,15 +414,4 @@ sleep 2
 
 clear
 
-if (ps -q $pid_qemu -o state --no-headers)
-then
-  echo -e "\n\n Résumé"
-  echo -e "------------------------------------\n"
-  echo "Qemu en cours de fonctionnement (PID: $pid_qemu) !"
-  echo "ISO/IMG : $img_sys"
-  echo "Disque : $disk_device"
-  echo "Nom disque dur virtuel : $img_name_out"
-  echo "Taille disque dur virtuel (en GB): ${size_vm_img}"
-  echo "RAM : ${ramvmmb}MB"
-  echo -e "CPU : $cpuvm \n"
-fi
+all_infos
