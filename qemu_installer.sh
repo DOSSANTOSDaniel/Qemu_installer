@@ -10,14 +10,26 @@
 # Bash_Version: 5.0.17(1)-release                                     
 #--------------------------------------------------#
 # Description:                                      
+#   A l'aide de Qemu ce script va permettre d'installer, tester ou démarrer 
+#   différents systèmes d'exploitation directement sur ou à partir de périphériques de stockage ou de disques virtuels.                                                
 #                                                   
-#                                                   
-# Options:                                          
-#                                                   
+# Fonctionnalitées:                                          
+#  Installation de systèmes d'exploitation sur un support physique ou virtuel.
+#  Teste de live cd.
+#  Exécution de systèmes déjà installés soit avec un support de stockage physique ou virtuel.
+#  Exécution de live cd avec un support de stockage physique ou virtuel, dans le but par exemple de réparer le Grub sur une installation.
+#  Passthrough USB, se qui va nous permettre d’accéder à un périphérique USB sur la machine host directement à partir de la machine virtuelle.
+#  Connexion SSH à partir du port 2222.
+#                                               
 # Usage: ./qemu_installer.sh                                            
 #                                                   
 # Limits:                                           
-#                                                   
+#  Le script doit être lancé en tant que root.
+#  Ce script est seulement compatible avec des installations en 64bits.
+#  Création du dossier /home/$USER/Qemu_vms/ pour stocker les images disque, si utilisation.
+#  Chaque disque virtuel est crée au format RAW.
+#  Démarrer un seul système d'exploitation à la fois sur votre machine.                                             
+# 
 # Licence:                                          
 #--------------------------------------------------#
 
@@ -25,10 +37,7 @@ set -eu
 
 ### Includes ###
 
-### Constants ###
-
 ### Fonctions ###
-
 usage() {
   cat << EOF
   
@@ -45,9 +54,12 @@ usage() {
   1. Installation de systèmes d'exploitation sur un support physique ou virtuel.
   2. Teste des live cd.
   3. Exécution de systèmes déjà installés soit avec un support de stockage physique ou virtuel.
+  4. Exécution de live cd avec un support de stockage physique ou virtuel, dans le but par exemple de réparer le Grub sur une installation.
+  5. Passthrough USB, se qui va nous permettre d’accéder à un périphérique USB sur la machine host directement à partir de la machine virtuelle.
+  6. Connexion SSH à partir du port 2222.
 
   Usage:
-  ./$(basename ${0}) -[h|v]
+  ./$(basename ${0}) -[h|v|u]
   
   ./$(basename ${0}) -[d|o|s] <Arguments>
   
@@ -57,29 +69,33 @@ usage() {
   -d : Disque.(sda,sdb,sdc... ou disque virtuel au format raw)
   -o : Fichier ISO ou IMG.
   -s : Taille du disque virtuel en GB.
+  -u : Passthrough USB.
   
   Exemples:
   * Pour Installer Debian sur un périphérique physique (hd, ssd, usb):
-  ./$(basename ${0}) -d sdb -o /home/daniel/debian.iso
+  sudo ${0} -d sdb -o /home/daniel/debian.iso
   
   * Pour Installer Debian sur un disque virtuel (disque virtuel de 20 GB):
-  ./$(basename ${0}) -s 20 -o /home/daniel/debian.iso  
+  sudo ${0} -s 20 -o /home/daniel/debian.iso  
   
   * Pour tester un image live du système Debian:
-  ./$(basename ${0}) -o /home/daniel/debian.iso
+  sudo ${0} -o /home/daniel/debian.iso
 
   * Pour Lancer un système déjà installé sur un disque (clé USB, SSD, HD):
-  ./$(basename ${0}) -d sdb
+  sudo ${0} -d sdb
   
   * Pour Lancer un système déjà installé sur un disque virtuel :
-  ./$(basename ${0}) -d /home/daniel/Qemu_vms/disk_antiX-19.4_x64-full_13692.img 
+  sudo ${0} -d /home/daniel/Qemu_vms/disk_antiX-19.4_x64-full_13692.img 
+  
+  * Pour modifier un système déjà installé avec l'aide d'un live cd (En cas de problème avec Grub par exemple):
+  sudo ${0} -d /home/daniel/Qemu_vms/disk_debian-10-28595.img -o rescatux-0.73.iso
 
 EOF
 }
 
 version() {
   local ver='2'
-  local dat='01/08/21'
+  local dat='03/08/21'
   cat << EOF
   
   ___ Script : $(basename ${0}) ___
