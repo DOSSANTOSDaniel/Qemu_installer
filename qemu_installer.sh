@@ -91,10 +91,10 @@ EOF
 }
 
 test_img() {
-  user="$userhost"
-  ram="${ramvmmb}M"
-  cpu="$cpuvm"
-  img="$img_sys"
+  local user="$userhost"
+  local ram="${ramvmmb}M"
+  local cpu="$cpuvm"
+  local img="$img_sys"
   
   qemu-system-x86_64 \
   -runas $user \
@@ -105,8 +105,9 @@ test_img() {
   -show-cursor \
   -enable-kvm \
   -m $ram \
-  -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
-  -netdev user,id=network0 -device rtl8139,netdev=network0 \
+  -smp $cpu \
+  -device virtio-net,netdev=vmnic \
+  -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -cdrom $img \
   -boot d &
   
@@ -114,11 +115,11 @@ test_img() {
 }
 
 install_hard() {
-  user="$userhost"
-  ram="${ramvmmb}M"
-  cpu="$cpuvm"
-  disk="$disk_device"
-  img="$img_sys"
+  local user="$userhost"
+  local ram="${ramvmmb}M"
+  local cpu="$cpuvm"
+  local disk="$disk_device"
+  local img="$img_sys"
 
   qemu-system-x86_64 \
   -runas $user \
@@ -129,8 +130,9 @@ install_hard() {
   -show-cursor \
   -enable-kvm \
   -m $ram \
-  -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
-  -netdev user,id=network0 -device rtl8139,netdev=network0 \
+  -smp $cpu \
+  -device virtio-net,netdev=vmnic \
+  -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -drive file=${disk},format=raw \
   -cdrom $img \
   -boot once=d &
@@ -139,15 +141,14 @@ install_hard() {
 }
 
 install_virt() {
-  user="$userhost"
-  ram="${ramvmmb}M"
-  cpu="$cpuvm"
-  disk="$disk_device"
-  img="$img_sys"
+  local user="$userhost"
+  local ram="${ramvmmb}M"
+  local cpu="$cpuvm"
+  local disk="$disk_device"
+  local img="$img_sys"
 
-  size_disk="$size_vm_img"
-  dir_vm_img="/home/$userhost/Qemu_vms"
-  img_name="$(basename $(basename -- $img_sys .iso) .img)"
+  local size_disk="$size_vm_img"
+  local img_name="$(basename $(basename -- $img .iso) .img)"
   
   # create directory
   if ! [[ -d $dir_vm_img ]]
@@ -169,8 +170,9 @@ install_virt() {
   -show-cursor \
   -enable-kvm \
   -m $ram \
-  -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
-  -netdev user,id=network0 -device rtl8139,netdev=network0 \
+  -smp $cpu \
+  -device virtio-net,netdev=vmnic \
+  -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -drive file=${dir_vm_img}/${img_name_out},format=raw \
   -cdrom $img \
   -boot once=d &
@@ -193,35 +195,46 @@ start_sys() {
   -show-cursor \
   -enable-kvm \
   -m $ram \
-  -smp cpus=1,cores=$cpu,sockets=1,maxcpus=$cpu \
-  -netdev user,id=network0 -device rtl8139,netdev=network0 \
+  -smp $cpu \
+  -device virtio-net,netdev=vmnic \
+  -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -drive file=${disk} \
   -boot c &
   
   pid_qemu="$!"
 }
 
-check_name_disk() {
-  disk="$disk_device"
+usb_host() {
+  PS3="Votre choix : "
+  mapfile -t usb_devices < <(lsusb | awk '{for(i=6;i<=NF;i++) printf $i" "; print ""}')
 
-  regex="^[s][d][a-z]$"
+  echo -e "\n -- Menu USB -- "
+  select ITEM in "${usb_devices[@]}" 'Quitter'
+  do
+    if [[ $ITEM == 'Quitter' ]]
+    then
+      echo "Fin du programme!"
+      exit 0
+    fi
+    break
+  done
 
-  if [[ ! $(basename $disk) =~ ${regex} ]]
-  then
-    echo "Erreur de saisie ! :"
-    echo " La valeur $(basename $disk) n'est pas permise !"
-    usage
-    exit 1
-  fi
+  local vendorid="0x$(echo "$ITEM" | awk '{print $1}' | cut -d':' -f1)"
+  local productid="0x$(echo "$ITEM" | awk '{print $1}' | cut -d':' -f2)"
+
+  usb_option="-device usb-ehci,id=ehci -device usb-host,vendorid=$vendorid,productid=$productid"
 }
 
 ### Global variables ###
-# user
-userhost="$(id -u 1000 -n)"
+# User host
+readonly userhost="$(id -u 1000 -n)"
 
-# nb ram
-ramkb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-ramvmmb=$(($ramkb / 2 / 1000))
+# Directory of img
+readonly dir_vm_img="/home/$userhost/Qemu_vms"
+
+# RAM for VM
+readonly ramkb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+readonly ramvmmb=$(($ramkb / 2 / 1000))
 
 # Disk
 disk_device=""
@@ -247,9 +260,9 @@ fi
 # nb proc
 if [[ $(nproc) -gt 1 ]]
 then
-  cpuvm=$(($(nproc) / 2))
+  readonly cpuvm=$(($(nproc) / 2))
 else
-  cpuvm='1'
+  readonly cpuvm='1'
 fi
 
 # Filter user options
@@ -282,7 +295,7 @@ do
       exit 1
       ;;
     d)
-      disk_device="${OPTARG}"
+      readonly disk_device_all="${OPTARG}"
       ;;
     o)
       readonly img_sys="${OPTARG}"
@@ -306,23 +319,33 @@ do
   esac
 done
 
-# Install
-apt-get install ovmf qemu qemu-system-x86 -y
+# Install dependencies 
+if ! (qemu-system-x86_64 -version)
+then
+  apt-get install ovmf qemu qemu-system-x86 -y
+fi
 
 if [[ ! -z ${disk_device} && ! -z ${img_sys} && -z $size_vm_img ]]
 then
-  disk_device="/dev/${disk_device}"
-  check_name_disk
+  readonly regex="^[s][d][a-z]$"
+
+  if [[ $disk_device =~ ${regex} ]]
+  then
+    readonly disk_device="/dev/${disk_device_all}"
+  else
+    readonly disk_device="$disk_device_all"
+  fi
+  
   install_hard
 elif [[ -z ${disk_device} && ! -z ${img_sys} && ! -z $size_vm_img ]]
 then
   # Size of virtual disk
   ## free space of host disk
-  free_space_kb="$(df --type=ext4 -l --output=avail | tail -n +2)"
-  free_space_mb="$((${free_space_kb}/1000))" #MB
-  free_space_disk="$((${free_space_mb}-10000))" # Security
+  readonly free_space_kb="$(df --type=ext4 -l --output=avail | tail -n +2)"
+  readonly free_space_mb="$((${free_space_kb}/1000))" #MB
+  readonly free_space_disk="$((${free_space_mb}-10000))" # Security
 
-  size_vm_img_mb="$((${size_vm_img}*1000))"
+  readonly size_vm_img_mb="$((${size_vm_img}*1000))"
 
   if [[ $size_vm_img_mb -gt ${free_space_disk} ]]
   then
