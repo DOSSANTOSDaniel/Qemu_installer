@@ -39,6 +39,11 @@
 
 ## Exemples
 
+La commande pour connaître le nom du disque à utiliser : 
+```Bash
+$ lsblk --exclude 7
+```
+
   * Pour Installer Debian sur un périphérique physique (hd, ssd, usb):
   ```Bash  
   sudo ./qemu_installer -d sdb -o /home/daniel/debian.iso
@@ -76,4 +81,8 @@
 3. Lancement de l'installation.
   ![capture](https://github.com/DOSSANTOSDaniel/Qemu_installer/blob/main/images/Cap.png)
 
+## A faire
   
+- [ ] Ajouter la possibilité de démarrer des installations en EFI.
+- [ ] Fonction de partitionnement automatique des périphériques de stockage pour des installations type.
+- [ ] Avoir le copier coller dans la fenêtre Qemu.
