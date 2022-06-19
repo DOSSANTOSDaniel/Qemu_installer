@@ -113,15 +113,20 @@ test_img() {
   local img="$img_sys"
   local usb="$usb_option"
   
+  #-runas $user \   pour que QEMU abandonne les privilèges de root
+  #-cpu host \ Emulation du CPU de l'hôte plutôt que générique.
   qemu-system-x86_64 \
   -runas $user \
+  -snapshot \
   -cpu host \
-  -soundhw all \
-  -accel kvm \
-  -show-cursor \
   -enable-kvm \
   -m $ram \
   -smp $cpu \
+  -usb -device usb-tablet \
+  -display default,show-cursor=on \
+  -device VGA,edid=on,xres=1280,yres=720 \
+  -device ich9-intel-hda,id=sound0,addr=0x1b \
+  -device hda-duplex,id=sound0-codec0,bus=sound0.0,cad=0 \
   -device virtio-net,netdev=vmnic \
   -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -cdrom $img \
@@ -141,12 +146,14 @@ install_hard() {
   qemu-system-x86_64 \
   -runas $user \
   -cpu host \
-  -soundhw all \
-  -accel kvm \
-  -show-cursor \
   -enable-kvm \
   -m $ram \
   -smp $cpu \
+  -usb -device usb-tablet \
+  -display default,show-cursor=on \
+  -device VGA,edid=on,xres=1280,yres=720 \
+  -device ich9-intel-hda,id=sound0,addr=0x1b \
+  -device hda-duplex,id=sound0-codec0,bus=sound0.0,cad=0 \
   -device virtio-net,netdev=vmnic \
   -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -drive file=${disk},format=raw \
@@ -182,12 +189,14 @@ install_virt() {
   qemu-system-x86_64 \
   -runas $user \
   -cpu host \
-  -soundhw all \
-  -accel kvm \
-  -show-cursor \
   -enable-kvm \
   -m $ram \
   -smp $cpu \
+  -display default,show-cursor=on \
+  -usb -device usb-tablet \
+  -device VGA,edid=on,xres=1280,yres=720 \
+  -device ich9-intel-hda,id=sound0,addr=0x1b \
+  -device hda-duplex,id=sound0-codec0,bus=sound0.0,cad=0 \
   -device virtio-net,netdev=vmnic \
   -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -drive file=${dir_vm_img}/${img_name_out},format=raw \
@@ -207,12 +216,14 @@ start_sys() {
   qemu-system-x86_64 \
   -runas $user \
   -cpu host \
-  -soundhw all \
-  -accel kvm \
-  -show-cursor \
   -enable-kvm \
   -m $ram \
   -smp $cpu \
+  -usb -device usb-tablet \
+  -display default,show-cursor=on \
+  -device VGA,edid=on,xres=1280,yres=720 \
+  -device ich9-intel-hda,id=sound0,addr=0x1b \
+  -device hda-duplex,id=sound0-codec0,bus=sound0.0,cad=0 \
   -device virtio-net,netdev=vmnic \
   -netdev user,id=vmnic,hostfwd=tcp:127.0.0.1:2222-:22 \
   -drive file=${disk} \
