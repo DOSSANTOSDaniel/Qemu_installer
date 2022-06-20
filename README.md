@@ -86,3 +86,6 @@ $ lsblk --exclude 7
 - [ ] Ajouter la possibilité de démarrer des installations en EFI.
 - [ ] Fonction de partitionnement automatique des périphériques de stockage pour des installations type.
 - [ ] Avoir le copier coller dans la fenêtre Qemu.
+- [ ] Ajouter TPM2 pour les installations de Windows 11.
+- [ ] Créer une meilleure gestion des ressources automatiquement ou laisser l'utilisateur choisir.
+- [ ] Pouvoir choisir l'architecture.
