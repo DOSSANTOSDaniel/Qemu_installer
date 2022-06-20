@@ -123,7 +123,6 @@ test_img() {
   -m $ram \
   -smp $cpu \
   -usb -device usb-tablet \
-  -display default,show-cursor=on \
   -device VGA,edid=on,xres=1280,yres=720 \
   -device ich9-intel-hda,id=sound0,addr=0x1b \
   -device hda-duplex,id=sound0-codec0,bus=sound0.0,cad=0 \
@@ -150,7 +149,6 @@ install_hard() {
   -m $ram \
   -smp $cpu \
   -usb -device usb-tablet \
-  -display default,show-cursor=on \
   -device VGA,edid=on,xres=1280,yres=720 \
   -device ich9-intel-hda,id=sound0,addr=0x1b \
   -device hda-duplex,id=sound0-codec0,bus=sound0.0,cad=0 \
@@ -192,7 +190,6 @@ install_virt() {
   -enable-kvm \
   -m $ram \
   -smp $cpu \
-  -display default,show-cursor=on \
   -usb -device usb-tablet \
   -device VGA,edid=on,xres=1280,yres=720 \
   -device ich9-intel-hda,id=sound0,addr=0x1b \
@@ -220,7 +217,6 @@ start_sys() {
   -m $ram \
   -smp $cpu \
   -usb -device usb-tablet \
-  -display default,show-cursor=on \
   -device VGA,edid=on,xres=1280,yres=720 \
   -device ich9-intel-hda,id=sound0,addr=0x1b \
   -device hda-duplex,id=sound0-codec0,bus=sound0.0,cad=0 \
